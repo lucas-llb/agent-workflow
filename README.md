@@ -16,6 +16,31 @@ workflow → router → analyst → planner (enriches tasks)
 - **Claude Code** — run the command `/agent-workflow` from the project root.
 - **Codex** — slash commands are not available; invoke the `agent-workflow` skill explicitly: `$agent-workflow implement feature X`.
 
+## Installing the host files
+
+The `Claude/` and `Codex/` folders contain the files that must be installed in each tool's user directory. Copy their contents into the matching hidden folder in your home directory; do not keep an extra `Claude/` or `Codex/` folder level.
+
+For Claude Code, copy:
+
+```text
+Claude/agents/    → ~/.claude/agents/
+Claude/commands/  → ~/.claude/commands/
+Claude/skills/    → ~/.claude/skills/
+Claude/templates/ → ~/.claude/templates/
+```
+
+For Codex, copy:
+
+```text
+Codex/agents/    → ~/.codex/agents/
+Codex/skills/    → ~/.codex/skills/
+Codex/templates/ → ~/.codex/templates/
+```
+
+On Windows, `~/.claude` means `C:\Users\<your-user>\.claude` and `~/.codex` means `C:\Users\<your-user>\.codex`. Merge the folders if they already exist so that other installed agents and skills are preserved.
+
+After installation, open the project you want to work on and run the workflow from that project's root. The project's source code remains in the project repository; only the host files above belong in the user directories.
+
 The workflow stores the source of truth in:
 
 ```text
