@@ -137,8 +137,8 @@ IMPORTANT: Execute agents SEQUENTIALLY - DO NOT run in parallel.
      [02] <task title> — specialist: <name>
      ...
    After the last task, PHASE 3 will add:
-     [NN]   Cobertura de testes final — agent-test-engineer
-     [NN+1] Revisão técnica final — agent-reviewer (max 3 rounds)
+     [NN]   Final test coverage — agent-test-engineer
+     [NN+1] Final technical review — agent-reviewer (max 3 rounds)
    To proceed type: ok, continue, approve
    To cancel type: cancel
    ```
@@ -233,7 +233,7 @@ When the last implementation task is marked `done`, **create two new task files*
 
 Execute them in order, sequentially.
 
-#### Final Task A — `[NN]_task.md` "Cobertura de testes final" → `agent-test-engineer`
+#### Final Task A — `[NN]_task.md` "Final test coverage" → `agent-test-engineer`
 
 - Read the PRD acceptance criteria plus every `[num]_task.md` test note, then map existing tests against them.
 - Identify missing unit (xUnit backend / RTL frontend), integration and E2E (Playwright) coverage — for game projects, missing Unity Test Framework EditMode/PlayMode coverage instead.
@@ -244,7 +244,7 @@ Execute them in order, sequentially.
 
 > Test-engineer runs **before** the reviewer so the tests it authors are themselves covered by the final review.
 
-#### Final Task B — `[NN+1]_task.md` "Revisão técnica final" → `agent-reviewer`
+#### Final Task B — `[NN+1]_task.md` "Final technical review" → `agent-reviewer`
 
 ⛔ **Hard limit: 3 review rounds. A 4th review pass is never allowed.**
 
@@ -266,14 +266,14 @@ Rules for this task:
 - After each round, record the counter in the task file: `review_round: <N>/3`.
 - Each fix round is executed by the specialist that owns the affected task (its `specialist:` field), never by the reviewer itself. The specialist re-runs the affected suites after fixing.
 - After the round-3 fixes are applied, the task is finalized — **do not start a round 4** even if findings remain.
-- Anything still open at that point is written into the task file under `## Pendências pós-revisão` and reported to the user in the completion summary, never silently dropped.
-- Mark `status: done` with the note `> ✅ Revisão final concluída em <N>/3 rodadas — <one-line summary> — <timestamp>`.
+- Anything still open at that point is written into the task file under `## Post-review pending items` and reported to the user in the completion summary, never silently dropped.
+- Mark `status: done` with the note `> ✅ Final review completed in <N>/3 rounds — <one-line summary> — <timestamp>`.
 
 ---
 
 ### Cleanup
 
-- After both PHASE 3 tasks are `done`, notify the user with a completion summary that includes the review round count (`<N>/3`) and any `Pendências pós-revisão`.
+- After both PHASE 3 tasks are `done`, notify the user with a completion summary that includes the review round count (`<N>/3`) and any `Post-review pending items`.
 - No plan file to archive — task files are the permanent record.
 - Show the completion message with a summary and links to all task files (implementation + the two final quality tasks).
 
@@ -288,7 +288,7 @@ Rules for this task:
 - The **specialist writes all tests via TDD**, including E2E (Playwright) or Unity EditMode/PlayMode.
 - The **specialist self-verifies** (`verification-before-completion`) — there is no per-task quality gate by another agent.
 - The **test-engineer** is no longer a per-task gate. It runs exactly once, as PHASE 3 Final Task A, auditing PRD coverage and writing whatever tests are still missing.
-- The **reviewer** is no longer a per-task gate. It runs exactly once, as PHASE 3 Final Task B, capped at **3 review rounds**; after the third round's fixes the feature is finalized regardless of remaining findings, which are recorded as `Pendências pós-revisão`.
+- The **reviewer** is no longer a per-task gate. It runs exactly once, as PHASE 3 Final Task B, capped at **3 review rounds**; after the third round's fixes the feature is finalized regardless of remaining findings, which are recorded as `Post-review pending items`.
 - If execution is interrupted, resume by re-running the command: Phase 2 auto-detects enriched tasks and skips done ones, and Phase 3 resumes from whichever final task is still pending (reading `review_round:` to know which round to continue from).
 
 ---

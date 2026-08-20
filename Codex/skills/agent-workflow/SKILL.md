@@ -103,7 +103,7 @@ When approved:
 
 When the last implementation task is `done`, create two new task files in `./docs/tasks/prd-[feature-slug]/`, numbered right after the last implementation task (last is `07_task.md` -> create `08_task.md` and `09_task.md`). They use the standard task-file format (`status: pending`, `<requirements>`, subtask checkboxes) so the run stays resumable. Execute them in order.
 
-#### Final Task A — `[NN]_task.md` "Cobertura de testes final" -> `agent_test_engineer`
+#### Final Task A — `[NN]_task.md` "Final test coverage" -> `agent_test_engineer`
 
 - Map PRD acceptance criteria and every task's test notes against the existing tests.
 - Identify missing unit, integration and E2E coverage (or Unity EditMode/PlayMode coverage for game projects).
@@ -114,7 +114,7 @@ When the last implementation task is `done`, create two new task files in `./doc
 
 > Test-engineer runs before the reviewer so the tests it authors are covered by the final review.
 
-#### Final Task B — `[NN+1]_task.md` "Revisão técnica final" -> `agent_reviewer`
+#### Final Task B — `[NN+1]_task.md` "Final technical review" -> `agent_reviewer`
 
 ⛔ **Hard limit: 3 review rounds. A 4th review pass is never allowed.**
 
@@ -136,14 +136,14 @@ Rules:
 - After each round record `review_round: <N>/3` in the task file.
 - Fixes are always applied by the specialist that owns the affected task, never by the reviewer. The specialist re-runs the affected suites after fixing.
 - After the round-3 fixes, finalize — never start a round 4.
-- Whatever is still open goes under `## Pendências pós-revisão` in the task file and into the completion summary.
-- Mark `status: done` with `> ✅ Revisão final concluída em <N>/3 rodadas — <summary> — <timestamp>`.
+- Whatever is still open goes under `## Post-review pending items` in the task file and into the completion summary.
+- Mark `status: done` with `> ✅ Final review completed in <N>/3 rounds — <summary> — <timestamp>`.
 
 ### Cleanup
 
 After both Phase 3 tasks are done:
 
-1. summarize completion, including the review round count and any `Pendências pós-revisão`
+1. summarize completion, including the review round count and any `Post-review pending items`
 2. apply `finishing-a-development-branch`
 
 ## Specialist Mapping

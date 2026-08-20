@@ -2,29 +2,43 @@
 
 Agent Workflow provides a task-driven, multi-agent workflow for turning a feature request into an approved implementation plan and executing it task by task.
 
-## Using `/agent-workflow`
+The flow is:
 
-Run the command from the project root. The workflow stores the source of truth in:
+```text
+workflow → router → analyst → planner (enriches tasks)
+  → [per-task: specialist (TDD) + self-verification]
+  → FINAL TASK A: test-engineer (test coverage audit)
+  → FINAL TASK B: reviewer (max 3 review rounds)
+```
+
+## Hosts
+
+- **Claude Code** — run the command `/agent-workflow` from the project root.
+- **Codex** — slash commands are not available; invoke the `agent-workflow` skill explicitly: `$agent-workflow implement feature X`.
+
+The workflow stores the source of truth in:
 
 ```text
 docs/tasks/prd-[feature-slug]/
 ```
 
-### 1. Create the PRD, Tech Spec, and tasks
+## Starting a new feature
 
-For a new feature, describe the feature when you first invoke `/agent-workflow`:
+Describe the feature when you first invoke the workflow:
 
 ```text
 /agent-workflow "Add user authentication with email and password"
 ```
 
-When no specification exists for the feature, the workflow creates the planning artifacts in order:
+When no specification exists, the workflow creates the planning artifacts in order:
 
-1. `prd.md` — product requirements and scope.
-2. `techspec.md` — technical design and implementation approach.
-3. `tasks.md` and numbered task files — the implementation breakdown.
+1. `prd.md` — product requirements and scope (created via the `create-prd` skill).
+2. `techspec.md` — technical design and implementation approach (`create-techspec`).
+3. `implementation_blueprint.md` — the planner's per-task implementation details, produced by the analyst + planner.
+4. `tasks.md` and numbered `[num]_task.md` files — the implementation breakdown, already enriched with `## Implementation Details` sections and a `specialist:` per task (`create-tasks`).
+5. Router confirmation of the default specialist.
 
-The workflow pauses for approval after the PRD, after the Tech Spec, and before task execution. It also analyzes the codebase, enriches the task files with implementation details, and assigns a specialist to each task.
+The workflow pauses for user approval after the PRD, after the Tech Spec, and before task execution.
 
 The resulting directory looks like this:
 
@@ -32,68 +46,90 @@ The resulting directory looks like this:
 docs/tasks/prd-user-authentication/
 ├── prd.md
 ├── techspec.md
+├── implementation_blueprint.md
 ├── tasks.md
 ├── 01_task.md
 └── 02_task.md
 ```
 
-Review and approve these documents before starting implementation.
+Bug fixes skip spec creation and are treated as a single task.
 
-### 2. Start or continue a PRD or task
+## Key observations
 
-After the planning files exist, invoke `/agent-workflow` again using the same feature description. Reusing the original description keeps the command pointed at the existing PRD folder:
+- **`prd.md` and `techspec.md` are the most important part for defining success** — they are what the whole implementation is measured against. Give them close attention.
+- **Pay attention to the acceptance criteria** — always review them against the PRD before and during execution.
+- **Model choice** — always use a more robust model for planning, task enrichment, and Final Tasks A and B. Use simpler models for coding.
+
+## Continuing an existing feature
+
+Re-invoke the workflow with the same feature description (or without any, if the current workflow is known by the host):
 
 ```text
 /agent-workflow "Add user authentication with email and password"
 ```
 
-If the current workflow is already known by the host, you can continue it without repeating the task description:
+The workflow detects the existing PRD and task files and resumes from the first task not marked `status: done`.
 
-```text
-/agent-workflow
-```
+## Phases
 
-The workflow detects the existing PRD and task files, then:
+### Phase 0 — Project context (always first)
 
-- starts with the first task that is not marked `status: done`;
-- executes tasks in numeric order, one at a time;
-- delegates each task to its assigned specialist;
-- runs the reviewer and test engineer gates;
-- marks the task as done only after review and tests pass.
+Reads `AGENTS.md` (or `CLAUDE.md`), records the project's language, frameworks, conventions and constraints, and carries that context into every agent handoff. Project files take priority over workflow defaults.
 
-If execution is interrupted, run `/agent-workflow` again. It resumes from the first task without `status: done`; completed tasks are not repeated.
+### Phase 0.5 — Spec-driven context
 
-### Optional parameters
+Locates the feature spec in `docs/tasks/prd-[feature-slug]/`. Creates the PRD → Tech Spec → blueprint → tasks (as described above) for new features, or loads the existing documents.
 
-You can set the quality level or force a default specialist:
+### Phase 1 — Enrich tasks (runs once, before any implementation)
+
+1. **Router** (`agent-router`) suggests the default specialist and asks the user to confirm, change, or cancel.
+2. **Analyst** (`agent-analyst`) analyzes the codebase, PRD, Tech Spec and task files for gaps and constraints.
+3. **Planner** (`agent-planner`) appends `## Implementation Details` to each task file, including its `specialist:`.
+4. **Pause** — the enriched task list is shown and execution waits for explicit approval.
+
+New features created via Phase 0.5 arrive already enriched, so Phase 1 skips straight to router + approval.
+
+### Phase 2 — Execute implementation tasks
+
+Tasks run strictly sequentially, one at a time, in numeric order:
+
+- The specialist is read from each task's `specialist:` field (falling back to the router's default).
+- The specialist implements the task via **mandatory TDD** (`test-driven-development`) and owns **every test level**: unit, integration, and E2E (Playwright) — or Unity EditMode/PlayMode for game tasks.
+- The specialist runs the affected suites (`dotnet test`, `npm run test:unit`, `npm run test:e2e`) — all must pass.
+- The specialist **self-verifies** (`verification-before-completion`). There is no per-task reviewer or test-engineer gate.
+- The task file is marked `status: done` with a completion note before the next task is picked.
+
+### Phase 3 — Final quality tasks
+
+After the last implementation task, two new task files are created and executed in order:
+
+- **Final Task A — "Final test coverage" → `agent-test-engineer`**: maps PRD acceptance criteria against existing tests, writes whatever is missing, and runs the full affected suites. It runs first so the tests it authors are covered by the final review.
+- **Final Task B — "Final technical review" → `agent-reviewer`**: reviews the whole feature with a **hard limit of 3 review rounds**. Fixes between rounds are applied by the task's owning specialist, never by the reviewer. After round 3 the feature is finalized regardless of remaining findings — anything still open is recorded under `## Post-review pending items` and reported in the completion summary.
+
+### Cleanup
+
+A completion summary is shown (including the review round count `<N>/3` and any pending items), then `finishing-a-development-branch` is applied to finalize the merge/PR/cleanup choice.
+
+## Specialists
+
+Supported specialists (the full set Phase 2 may dispatch):
+
+`data-engineer`, `devops`, `infrastructure`, `security`, `mobile-flutter`, `frontend-react`, `frontend-angular`, `backend`, `unity`, `3d-artist`, `game-developer`, and `developer` (fallback).
+
+`agent-reviewer` and `agent-test-engineer` are never per-task specialists — they run only as the two Phase 3 final tasks.
+
+## Optional parameters
 
 ```text
 /agent-workflow "Add user authentication with email and password" --quality=strict --specialist=backend
 ```
 
-Supported specialist values include `backend`, `frontend-react`, `frontend-angular`, `data-engineer`, `devops`, `infrastructure`, `security`, `mobile-flutter`, and `developer`.
+- `--quality` — quality level (`pragmatic`, `balanced`, `strict`).
+- `--specialist` — force a specific specialist for all tasks, skipping the router's suggestion.
 
-## Workflow at a glance
+## Interruptions and resume
 
-```text
-New feature:
-/agent-workflow
-  → PRD
-  → Tech Spec
-  → task breakdown
-  → approval
-  → specialist
-  → reviewer
-  → test engineer
-  → next task
+If execution is interrupted, re-run the workflow. The task files are the permanent record:
 
-Existing feature or interrupted run:
-/agent-workflow
-  → first pending task
-  → specialist
-  → reviewer
-  → test engineer
-  → resume or finish
-```
-
-The task files under `docs/tasks/prd-[feature-slug]/` are the permanent workflow record. No separate plan file is created.
+- Phase 2 resumes from the first task without `status: done`; completed tasks are never repeated.
+- If the Phase 3 task files already exist, they are resumed, not recreated — reading `review_round:` to know which review round to continue from.
